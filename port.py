@@ -5,7 +5,7 @@ import threading
 from ports_and_ships.stores import Warehouse, Container
 
 
-logger = logging.getLogger({__name__})
+logger = logging.getLogger(__name__)
 
 
 class Queue:
@@ -56,12 +56,13 @@ class Docker:
 
     def processing(self, working_time):
         while working_time:
-            print(f'Dock-{self.id} | Remaining work: {working_time} sec...')
+            logger.debug(f'Dock-{self.id} | Remaining work: {working_time} sec...')
             time.sleep(1)
             working_time -= 1
 
     def move(self, source, destination, list_of_items, flag_index):
         is_ok = False
+        logger.info(f"Moving from {source.name} to {destination.name}")
         while not is_ok:
             is_ok = True
             for container in list_of_items:
@@ -70,11 +71,14 @@ class Docker:
                         destination.put(source.pop(container))
                         self.processing(destination[container].type * 3)
                     else:
+                        logger.info(f"Something gone wrong while moving from {source.name} to {destination.name}")
                         is_ok = False
             time.sleep(0.5)
 
-        self.flags[flag_index]=True
+        self.flags[flag_index] = True
+
         if self.flags[0] and self.flags[1]:
+            logger.info(f"Moving from {source.name} to {destination.name} has been finished. Docker-{self.id} is free now!")
             self.is_free = True
 
 
@@ -94,6 +98,7 @@ class Port:
         print(f"{ship.name} has been put to the queue!")
 
     def manage(self):
+        logger.info("Starting to manage dockers")
         while True:
             for docker in self.dockers:
                 if docker.is_free:
