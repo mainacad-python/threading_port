@@ -21,6 +21,8 @@ class Container(Store):
         self.type = type
         logger.info(f"Container: {self.name}, vol: {self.volume} has been created!")
 
+    def __repr__(self):
+        return self.name
 
 class Warehouse(Store):
     def __init__(self, name, volume):
@@ -30,17 +32,17 @@ class Warehouse(Store):
 
     @property
     def free_volume(self):
-        return self.volume - sum(c.volume for c in self.containers)
+        return self.volume - sum([c.volume for c in self.containers.values()])
 
     def has(self, container_name):
         return container_name in self.containers.keys()
 
     def put(self, container):
         self.containers[container.name] = container
-        logger.info(f"Container {container} has been put into the {self.name}")
+        logger.debug(f"Container {container} has been put into the {self.name}")
 
     def pop(self, container_name):
-        logger.info(f"Container {container_name} has been popped from the {self.name}")
+        logger.debug(f"Container {container_name} has been popped from the {self.name}")
         return self.containers.pop(container_name)
 
 

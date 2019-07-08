@@ -2,8 +2,7 @@ import logging
 import time
 import threading
 
-from ports_and_ships.stores import Warehouse, Container
-
+from stores import Warehouse, Container
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +15,7 @@ class Queue:
         self._list.append(obj)
 
     def pop(self):
-        if not self._list:
+        if self._list:
             return self._list.pop(0)
         else:
             logger.warning("Queue is empty")
@@ -33,14 +32,14 @@ class Docker:
         logger.info(f"Docker: {self.id} has been created!")
 
     def serve_ship(self, ship, to_load, to_unload):
-        logger.info(f"Starting to serve ship '{ship.name}' to load: {to_load}, to unload: {to_unload}")
+        logger.info(f"At dock {self.id} starting to serve ship {ship.name} to load: {to_load}, to unload: {to_unload}")
         self.is_free = False
         if self.load_thrd:
-            logger.info("Finishing previous loading...")
+            logger.debug("Finishing previous loading...")
             self.load_thrd.join()
 
         if self.unload_thrd:
-            logger.info("Finishing previous unloading...")
+            logger.debug("Finishing previous unloading...")
             self.unload_thrd.join()
 
         self.unload_thrd = threading.Thread(target=self.move, args=(ship.holder, self.warehouse, to_unload, 0))
@@ -48,10 +47,10 @@ class Docker:
 
         self.flags = [False, False]
 
-        logger.info(f"Starting to unload {ship}")
+        logger.info(f"At dock {self.id} starting to unload {ship.name}")
         self.unload_thrd.start()
 
-        logger.info(f"Starting to load {ship}")
+        logger.info(f"At dock {self.id } starting to load {ship.name}")
         self.load_thrd.start()
 
     def processing(self, working_time):
@@ -62,14 +61,17 @@ class Docker:
 
     def move(self, source, destination, list_of_items, flag_index):
         is_ok = False
-        logger.info(f"Moving from {source.name} to {destination.name}")
+        logger.debug(f"Moving from {source.name} to {destination.name}")
         while not is_ok:
             is_ok = True
             for container in list_of_items:
                 if source.has(container):
                     if destination.free_volume >= source.containers[container].volume:
-                        destination.put(source.pop(container))
-                        self.processing(destination[container].type * 3)
+                        c=source.pop(container)
+                        destination.put(c)
+                        self.processing(destination.containers[container].type * 3)
+                        logger.info(
+                            f"At dock {self.id} moved complete container {c.name} from {source.name} to {destination.name}")
                     else:
                         logger.info(f"Something gone wrong while moving from {source.name} to {destination.name}")
                         is_ok = False
@@ -107,4 +109,6 @@ class Port:
                         docker.serve_ship(ship,
                                           to_load=self.manage_table[ship.name]['to_load'],
                                           to_unload=self.manage_table[ship.name]['to_unload'])
-            time.sleep(0.5)
+                    else:
+                        break
+            time.sleep(10)
